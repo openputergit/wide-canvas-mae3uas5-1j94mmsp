@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriAssist - Smart Agriculture Chatbot</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f9f0;
+        }
+        .chat-container {
+            height: calc(100vh - 240px);
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+        .message {
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .typing-indicator {
+            display: inline-block;
+            padding: 10px;
+        }
+        .typing-indicator span {
+            animation: blink 1.4s infinite both;
+        }
+        @keyframes blink {
+            0% { opacity: .2; }
+            20% { opacity: 1; }
+            100% { opacity: .2; }
+        }
+        .file-input-label {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <nav class="bg-green-600 text-white p-4">
+        <div class="container mx-auto flex items-center justify-between">
+            <h1 class="text-xl md:text-2xl font-bold">AgriAssist</h1>
+            <div class="flex items-center gap-4">
+                <button id="voiceBtn" class="p-2 rounded-full hover:bg-green-700">
+                    <i class="bi bi-mic-fill text-xl"></i>
+                </button>
+                <select id="languageSelect" class="bg-green-700 text-white p-2 rounded">
+                    <option value="en">English</option>
+                    <option value="hi">हिंदी</option>
+                </select>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-6">
+        <div class="chat-container bg-white rounded-lg shadow-lg p-4 mb-4">
+            <div id="chatMessages" class="space-y-4">
+                <div class="flex items-start">
+                    <div class="bg-green-100 rounded-lg p-3 message">
+                        <p class="font-medium text-green-800">
+                            Hello! I'm your AgriAssist bot. How can I help you with farming today?
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 right-0 bg-white p-4 border-t">
+            <div class="container mx-auto">
+                <div class="flex gap-2">
+                    <label class="file-input-label bg-green-100 p-2 rounded-full hover:bg-green-200">
+                        <i class="bi bi-image text-green-600"></i>
+                        <input type="file" id="imageInput" class="hidden" accept="image/*">
+                    </label>
+                    <input type="text" id="userInput" 
+                        class="flex-1 border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="Type your farming question here...">
+                    <button id="sendBtn" class="bg-green-600 text-white rounded-full px-6 py-2 hover:bg-green-700">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const voiceBtn = document.getElementById('voiceBtn');
+        const imageInput = document.getElementById('imageInput');
+        let recognition;
+
+        // Initialize speech recognition if available
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript;
+                voiceBtn.style.backgroundColor = '';
+            };
+
+            recognition.onend = () => {
+                voiceBtn.style.backgroundColor = '';
+            };
+        }
+
+        // Voice input handler
+        voiceBtn.addEventListener('click', () => {
+            if (recognition) {
+                recognition.start();
+                voiceBtn.style.backgroundColor = '#166534';
+            } else {
+                alert('Speech recognition is not supported in your browser.');
+            }
+        });
+
+        // Send message function
+        function sendMessage() {
+            const message = userInput.value.trim();
+            if (message) {
+                addMessage(message, 'user');
+                simulateResponse(message);
+                userInput.value = '';
+            }
+        }
+
+        // Image upload handler
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    addMessage('Image uploaded: ' + file.name, 'user', e.target.result);
+                    simulateResponse('Analyzing your image...');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Add message to chat
+        function addMessage(text, sender, imageUrl = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = flex items-start ${sender === 'user' ? 'justify-end' : ''};
+            
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `rounded-lg p-3 message ${
+                sender === 'user' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800'
+            }`;
+
+            if (imageUrl) {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.className = 'max-w-full rounded-lg mb-2';
+                messageBubble.appendChild(img);
+            }
+
+            const textP = document.createElement('p');
+            textP.textContent = text;
+            messageBubble.appendChild(textP);
+            messageDiv.appendChild(messageBubble);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Simulate bot response
+        function simulateResponse(query) {
+            addMessage('Typing...', 'bot');
+            
+            setTimeout(() => {
+                chatMessages.removeChild(chatMessages.lastChild);
+                
+                let response = '';
+                if (query.toLowerCase().includes('fertilizer') && query.toLowerCase().includes('wheat')) {
+                    response = "For wheat, I recommend using NPK fertilizer in the ratio of 120:60:40. Apply in split doses - 50% nitrogen at sowing, remaining in 2 equal splits at tillering and flowering stages.";
+                } else if (query.toLowerCase().includes('weather')) {
+                    response = "I'm currently unable to fetch real-time weather data, but you can check the local weather service for accurate forecasts.";
+                } else if (query.toLowerCase().includes('analyzing your image')) {
+                    response = "I can see this is a crop image. To provide better analysis, I would need to connect to an image recognition API. For now, please describe the issue you're seeing.";
+                } else {
+                    response = "Thanks for your question! Normally I would connect to an AI service to provide accurate information. For now, I recommend consulting your local agricultural extension office for specific advice.";
+                }
+                
+                addMessage(response, 'bot');
+            }, 1500);
+        }
+
+        // Event listeners
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Language switcher
+        document.getElementById('languageSelect').addEventListener('change', (e) => {
+            const lang = e.target.value;
+            if (recognition) {
+                recognition.lang = lang === 'en' ? 'en-US' : 'hi-IN';
+            }
+            userInput.placeholder = lang === 'en' ? 
+                "Type your farming question here..." : 
+                "अपना कृषि प्रश्न यहां टाइप करें...";
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
